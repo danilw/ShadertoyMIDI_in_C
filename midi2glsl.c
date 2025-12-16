@@ -2,7 +2,8 @@
 
 /*
  * 
- * self 
+ * self https://github.com/danilw/ShadertoyMIDI_in_C
+ * License - ShadertoyMIDI_in_C is licensed under The Unlicense
  * 
  * This is port of original https://github.com/P-i-N/ShadertoyMIDI/tree/main/ShadertoyMIDI
  * port from C# to C
