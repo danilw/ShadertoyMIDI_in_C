@@ -71,7 +71,7 @@ bool IsInTimeRange(MergedMidiEvent* event, double fromTime, double toTime, doubl
 
 char* ToGLSLVec4String(const MergedMidiEvent* event) {
     char* buffer = malloc(128);
-    snprintf(buffer, 128, "vec4(%.5f, %.5f, %.2f, %.2f)",
+    snprintf(buffer, 128, "vec4(%.3f, %.3f, %.2f, %.2f)",
         event->TimeBegin,
         event->TimeEnd,
         (double)event->Program + (double)event->Panning / 127.0,
@@ -473,7 +473,8 @@ bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, cons
     for (int i = 0; i < programMappings.count; ++i)
         programMappingList[programMappings.entries[i].value] = programMappings.entries[i].key;
     
-    
+    // idk what it is - not used in shader code
+/*
     fprintf(f_out, "struct OPL2Operator { vec4 params, adsr; };\n");
     fprintf(f_out, "struct OPL2Voice { OPL2Operator mod, car; int feedback, noteOffset; };\n");
 
@@ -496,7 +497,7 @@ bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, cons
 
         fprintf(f_out, "    // %d: \"%s\" (program %d)\n", i, instr->Name, programMappingList[i]);
         char* tstr = OPL2ToGLSLString(instr);
-        fprintf(f_out, "    {%s}", tstr);
+        fprintf(f_out, "    %s", tstr);
         free(tstr);
 
         if (i < programMappings.count - 1)
@@ -505,7 +506,8 @@ bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, cons
             fprintf(f_out, "\n");
     }
     fprintf(f_out, ");\n");
-    
+*/
+
     fprintf(f_out, "struct Instrument { vec4 oscilators, octaves, adsr, fx; };\n\n");
     fprintf(f_out, "const Instrument instruments[%d] = Instrument[](\n", programMappings.count);
 
@@ -567,13 +569,19 @@ bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, cons
     fprintf(f_out, ");\n\n");
 
     
-    WriteGLSLUIntArray(f_out, "noteEvents", mergedEvents, mergedEventCount, 15);
+    // it does not include Panning
+    //WriteGLSLUIntArray(f_out, "noteEvents", mergedEvents, mergedEventCount, 15);
+    
+    // this works 
+    WriteGLSLvec4Array(f_out, "noteEvents", mergedEvents, mergedEventCount, 15);
     fprintf(f_out, "\n");
     
     fprintf(f_out, "// First usable noteEvent index for every second\n");
     WriteGLSLivec2Array(f_out, "timeEventRanges", timeEventRanges, timeEventRanges_size-1, 5);
     fprintf(f_out, "\n");
     
+    // when WriteGLSLUIntArray used
+/*
     fprintf(f_out, "const float secsPerTick = %.5f;\n",
         (((double)mf.tempo / 1000000.0) / (double)mf.ticksPerQuarterNote));
 
@@ -586,12 +594,13 @@ bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, cons
     fprintf(f_out, "    e.x = n & %du; n = n >> %d;\n\n", (1 << BITS_TICKS_BEGIN) - 1, BITS_TICKS_BEGIN);
     fprintf(f_out, "    // %d bits for note duration in ticks\n", BITS_DURATION);
     fprintf(f_out, "    e.y = e.x + (n & %du); n = n >> %d;\n\n", (1 << BITS_DURATION) - 1, BITS_DURATION);
-    fprintf(f_out, "    // {0} bits for note\n", BITS_NOTE);
+    fprintf(f_out, "    // %d bits for note\n", BITS_NOTE);
     fprintf(f_out, "    e.z = n & %du; n = n >> %d;\n\n", (1 << BITS_NOTE) - 1, BITS_NOTE);
     fprintf(f_out, "    // %d bits for instrument index with %d bits for velocity\n", BITS_INSTRUMENT_INDEX, BITS_VELOCITY);
     fprintf(f_out, "    e.w = (n & %du) | ((n & ~%du) << %d);\n", (1 << BITS_INSTRUMENT_INDEX) - 1, (1 << BITS_INSTRUMENT_INDEX) - 1, 4 - BITS_INSTRUMENT_INDEX);
     fprintf(f_out, "}\n");
-    
+*/
+
     freeMidiFile(&mf);
     free(mergedEvents);
     free(timeEventRanges);
