@@ -9,11 +9,28 @@
  * port from C# to C
  * 
  * NOT IMPLEMENTED:
- * FilterTimeRange ApplyTimeOffset - search below here
  * 
+ *      FilterTimeRange ApplyTimeOffset - search below here
+ *      this only "cut midi length to 120sec" - just cut outside in some midi editor
+ * 
+ *      Skip notes for channel 10 (drums) - search "Skip notes"
+ * 
+ * 
+ * ADDED:
+ * 
+ *      (TODO)
+ *      option to save vec4 (raw values very uncompressed) or uint (4x less data) or compressed data
+ *      
+ * 
+ * 
+ * EXAMPLE:
+ * 
+ *      placeholder for shader Image Sound code - look in example folder on github
+ *      or in original https://www.shadertoy.com/view/ftySWm
+ *      just replace Common with generated with this glsl code - when generated vec4 variant of Common
+ *      for uint/compressed data - use example in example folder
  * 
 */
-
 
 /*
 
@@ -239,7 +256,8 @@ void MergeMidiEvents(MidiFile* mf, MergedMidiEvent** mergedEvents, int* mergedEv
                     for (int i = index; i < noteOnEventCount - 1; i++) {
                         noteOnEvents[i] = noteOnEvents[i + 1];
                     }
-                    noteOnEventCount++;
+                    // everything here look very unsafe - yes - no checks for noteOnEventCount number - if midi file is broken - everything will leak I suppose xd
+                    noteOnEventCount--; 
 
                     (*mergedEventCount)++;
                 }
@@ -402,7 +420,7 @@ void RemapMidiPrograms(MergedMidiEvent *mergedMidiEvents, int mergedEventCount ,
     }
 }
 
-bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, const char* file_in, const char* file_out)
+bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, const char* file_in, const char* file_out, int write_type)
 {
     FILE* f_in = fopen(file_in, "rb");
     if (f_in == NULL) {
@@ -441,6 +459,7 @@ bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, cons
     printf("Last Event %d: TimeBegin=%.2f, TimeEnd=%.2f, Note=%d, Tick: %d\n", 
             mergedEventCount-1, mergedEvents[mergedEventCount-1].TimeBegin, mergedEvents[mergedEventCount-1].TimeEnd, 
             mergedEvents[mergedEventCount-1].Note, mergedEvents[mergedEventCount-1].TicksEnd);
+    int songLengthSeconds = (int)mergedEvents[mergedEventCount-1].TimeEnd;
     
     MergedMidiEvent *maxTicksDuration = MaxBy(mergedEvents, mergedEventCount);
     printf("Max ticks duration: %d\n", maxTicksDuration->TicksEnd - maxTicksDuration->TicksBegin);
@@ -568,38 +587,41 @@ bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, cons
     }
     fprintf(f_out, ");\n\n");
 
-    
-    // it does not include Panning
-    //WriteGLSLUIntArray(f_out, "noteEvents", mergedEvents, mergedEventCount, 15);
-    
-    // this works 
-    WriteGLSLvec4Array(f_out, "noteEvents", mergedEvents, mergedEventCount, 15);
-    fprintf(f_out, "\n");
-    
+
+    if(write_type==0){
+        WriteGLSLUIntArray(f_out, "noteEvents", mergedEvents, mergedEventCount, 15);
+    }else{
+        fprintf(f_out, "// Tuples of: [time begin, time end, program + panning, note + invVelocity]...\n");
+        WriteGLSLvec4Array(f_out, "noteEvents", mergedEvents, mergedEventCount, 5);
+        fprintf(f_out, "\n");
+    }
+
     fprintf(f_out, "// First usable noteEvent index for every second\n");
     WriteGLSLivec2Array(f_out, "timeEventRanges", timeEventRanges, timeEventRanges_size-1, 5);
     fprintf(f_out, "\n");
     
     // when WriteGLSLUIntArray used
-/*
-    fprintf(f_out, "const float secsPerTick = %.5f;\n",
-        (((double)mf.tempo / 1000000.0) / (double)mf.ticksPerQuarterNote));
+    if(write_type==0){
+        fprintf(f_out, "const float secsPerTick = %.5f;\n",
+            (((double)mf.tempo / 1000000.0) / (double)mf.ticksPerQuarterNote));
 
-    fprintf(f_out, "const float ticksPerSec = %.5f;\n\n",
-        ((double)mf.ticksPerQuarterNote / ((double)mf.tempo / 1000000.0)));
-    
-    fprintf(f_out, "void FillNoteEvent(in int i, out uvec4 e)\n{\n");
-    fprintf(f_out, "    uint n = noteEvents[i];\n\n");
-    fprintf(f_out, "    // %d bits for note begin in ticks\n", BITS_TICKS_BEGIN);
-    fprintf(f_out, "    e.x = n & %du; n = n >> %d;\n\n", (1 << BITS_TICKS_BEGIN) - 1, BITS_TICKS_BEGIN);
-    fprintf(f_out, "    // %d bits for note duration in ticks\n", BITS_DURATION);
-    fprintf(f_out, "    e.y = e.x + (n & %du); n = n >> %d;\n\n", (1 << BITS_DURATION) - 1, BITS_DURATION);
-    fprintf(f_out, "    // %d bits for note\n", BITS_NOTE);
-    fprintf(f_out, "    e.z = n & %du; n = n >> %d;\n\n", (1 << BITS_NOTE) - 1, BITS_NOTE);
-    fprintf(f_out, "    // %d bits for instrument index with %d bits for velocity\n", BITS_INSTRUMENT_INDEX, BITS_VELOCITY);
-    fprintf(f_out, "    e.w = (n & %du) | ((n & ~%du) << %d);\n", (1 << BITS_INSTRUMENT_INDEX) - 1, (1 << BITS_INSTRUMENT_INDEX) - 1, 4 - BITS_INSTRUMENT_INDEX);
-    fprintf(f_out, "}\n");
-*/
+        fprintf(f_out, "const float ticksPerSec = %.5f;\n\n",
+            ((double)mf.ticksPerQuarterNote / ((double)mf.tempo / 1000000.0)));
+        
+        fprintf(f_out, "void FillNoteEvent(in int i, out uvec4 e)\n{\n");
+        fprintf(f_out, "    uint n = noteEvents[i];\n\n");
+        fprintf(f_out, "    // %d bits for note begin in ticks\n", BITS_TICKS_BEGIN);
+        fprintf(f_out, "    e.x = n & %du; n = n >> %d;\n\n", (1 << BITS_TICKS_BEGIN) - 1, BITS_TICKS_BEGIN);
+        fprintf(f_out, "    // %d bits for note duration in ticks\n", BITS_DURATION);
+        fprintf(f_out, "    e.y = e.x + (n & %du); n = n >> %d;\n\n", (1 << BITS_DURATION) - 1, BITS_DURATION);
+        fprintf(f_out, "    // %d bits for note\n", BITS_NOTE);
+        fprintf(f_out, "    e.z = n & %du; n = n >> %d;\n\n", (1 << BITS_NOTE) - 1, BITS_NOTE);
+        fprintf(f_out, "    // %d bits for instrument index with %d bits for velocity\n", BITS_INSTRUMENT_INDEX, BITS_VELOCITY);
+        fprintf(f_out, "    e.w = (n & %du) | ((n & ~%du) << %d);\n", (1 << BITS_INSTRUMENT_INDEX) - 1, (1 << BITS_INSTRUMENT_INDEX) - 1, 4 - BITS_INSTRUMENT_INDEX);
+        fprintf(f_out, "}\n");
+    }
+
+    fprintf(f_out, "const int songLengthSeconds = %d;\n", songLengthSeconds);
 
     freeMidiFile(&mf);
     free(mergedEvents);
@@ -632,6 +654,7 @@ int main(int argc, char **argv)
     
     char *file_in = argv[1];
     char *file_out = argv[2];
+    int write_type = 1;
     
     char *file_op2 = "GENMIDI.op2";
     int OPL2_count = 0;
@@ -643,7 +666,7 @@ int main(int argc, char **argv)
         return 0;
     }
     
-    if(!ConvertMIDI(OPL2InstrumentsBank, OPL2_count, file_in, file_out))
+    if(!ConvertMIDI(OPL2InstrumentsBank, OPL2_count, file_in, file_out, write_type))
     {
         printf("error in ConvertMIDI\n");
         return 0;
