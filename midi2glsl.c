@@ -10,25 +10,28 @@
  * 
  * NOT IMPLEMENTED:
  * 
+ *      Skip notes for channel 10 (drums) - search "Skip notes"
+ * 
  *      FilterTimeRange ApplyTimeOffset - search below here
  *      this only "cut midi length to 120sec" - just cut outside in some midi editor
  * 
- *      Skip notes for channel 10 (drums) - search "Skip notes"
  * 
+ * this SUPPOSE to be used to:
+ *      "simplify" hand compression of repetition
+ *      if you have same part of music repetition - just cut this small segment - encode it with this - and add repetition on Shadertoy code
+ *      like in my https://www.shadertoy.com/view/WctcWf
  * 
- * ADDED:
- * 
- *      (TODO)
- *      option to save vec4 (raw values very uncompressed) or uint (4x less data) or compressed data
- *      
+ * simple compression of data - there many obvious repetition - just compress with some basic methods to not have vec4[1024] large arrays
  * 
  * 
  * EXAMPLE:
  * 
  *      placeholder for shader Image Sound code - look in example folder on github
  *      or in original https://www.shadertoy.com/view/ftySWm
- *      just replace Common with generated with this glsl code - when generated vec4 variant of Common
- *      for uint/compressed data - use example in example folder
+ *      just replace Common with generated with this glsl code
+ * 
+ * I tested this on midi from https://opengameart.org/content/quantum-2
+ * look correct - only "drums" not included as expected
  * 
 */
 
@@ -420,7 +423,7 @@ void RemapMidiPrograms(MergedMidiEvent *mergedMidiEvents, int mergedEventCount ,
     }
 }
 
-bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, const char* file_in, const char* file_out, int write_type)
+bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, const char* file_in, const char* file_out)
 {
     FILE* f_in = fopen(file_in, "rb");
     if (f_in == NULL) {
@@ -588,20 +591,24 @@ bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, cons
     fprintf(f_out, ");\n\n");
 
 
-    if(write_type==0){
-        WriteGLSLUIntArray(f_out, "noteEvents", mergedEvents, mergedEventCount, 15);
-    }else{
+
+    // idk how to decompress this - generate uint array - does not include TimeEnd, TimeBegin, Panning
+    // comment WriteGLSLvec4Array below if use WriteGLSLUIntArray
+    //WriteGLSLUIntArray(f_out, "noteEvents", mergedEvents, mergedEventCount, 15);
+    
+    {
         fprintf(f_out, "// Tuples of: [time begin, time end, program + panning, note + invVelocity]...\n");
         WriteGLSLvec4Array(f_out, "noteEvents", mergedEvents, mergedEventCount, 5);
         fprintf(f_out, "\n");
     }
-
+    
     fprintf(f_out, "// First usable noteEvent index for every second\n");
     WriteGLSLivec2Array(f_out, "timeEventRanges", timeEventRanges, timeEventRanges_size-1, 5);
     fprintf(f_out, "\n");
     
     // when WriteGLSLUIntArray used
-    if(write_type==0){
+/*
+    {
         fprintf(f_out, "const float secsPerTick = %.5f;\n",
             (((double)mf.tempo / 1000000.0) / (double)mf.ticksPerQuarterNote));
 
@@ -620,6 +627,7 @@ bool ConvertMIDI(OPL2Instrument* OPL2InstrumentsBank, const int OPL2_count, cons
         fprintf(f_out, "    e.w = (n & %du) | ((n & ~%du) << %d);\n", (1 << BITS_INSTRUMENT_INDEX) - 1, (1 << BITS_INSTRUMENT_INDEX) - 1, 4 - BITS_INSTRUMENT_INDEX);
         fprintf(f_out, "}\n");
     }
+*/
 
     fprintf(f_out, "const int songLengthSeconds = %d;\n", songLengthSeconds);
 
@@ -654,7 +662,6 @@ int main(int argc, char **argv)
     
     char *file_in = argv[1];
     char *file_out = argv[2];
-    int write_type = 1;
     
     char *file_op2 = "GENMIDI.op2";
     int OPL2_count = 0;
@@ -666,7 +673,7 @@ int main(int argc, char **argv)
         return 0;
     }
     
-    if(!ConvertMIDI(OPL2InstrumentsBank, OPL2_count, file_in, file_out, write_type))
+    if(!ConvertMIDI(OPL2InstrumentsBank, OPL2_count, file_in, file_out))
     {
         printf("error in ConvertMIDI\n");
         return 0;
