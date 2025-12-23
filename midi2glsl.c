@@ -11,6 +11,9 @@
  * NOT IMPLEMENTED:
  * 
  *      Skip notes for channel 10 (drums) - search "Skip notes"
+ *
+ *      instruments are limited - look MidiInstrument.h
+ *      just copy from original - nothing added
  * 
  *      FilterTimeRange ApplyTimeOffset - search below here
  *      this only "cut midi length to 120sec" - just cut outside in some midi editor
@@ -22,6 +25,8 @@
  *      like in my https://www.shadertoy.com/view/WctcWf
  * 
  * simple compression of data - there many obvious repetition - just compress with some basic methods to not have vec4[1024] large arrays
+ * https://www.shadertoy.com/view/WctcWf
+ * look there as example of expected use
  * 
  * 
  * EXAMPLE:
