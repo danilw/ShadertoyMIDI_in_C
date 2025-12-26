@@ -20,7 +20,7 @@
 - convert midi with
 - `./midi2glsl test.mid out.glsl`
 - open in test editor out.glsl
-- replace Common code with generated in https://www.shadertoy.com/view/ftySWm
+- replace Common code with generated in https://www.shadertoy.com/view/ftySWm - *also read athibau comment on shadertoy page explain why sound so lowq*
 - *or same shader code in example here*
 - if too large - around 1000 vec4 array should work everywhere - cut length of song to smaller to fit
 - and compare to converted to shadertoy "sound quality" - it will be bad
