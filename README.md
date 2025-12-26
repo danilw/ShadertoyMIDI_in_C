@@ -2,7 +2,8 @@
 
 **What is this** - this is port to C from C# of original https://github.com/P-i-N/ShadertoyMIDI
 
-**Use case** - to display/convert timings of notes. Create small segments of music and convert timings or small repetitive segments.
+**Use case** - to display/convert timings of notes.\
+Create small segments of music and convert timings or small repetitive segments.
 
 ## Limitations:
 
@@ -13,7 +14,7 @@
 
 ## Use example:
 
-- *As midi-web-editor use* - https://github.com/ryohey/signal *or web* https://signalmidi.app/edit or [exact same web midi app](https://www.aisongmaker.io/midi-editor)
+- *As midi-web-editor use* - https://github.com/ryohey/signal *or [web](https://signalmidi.app/edit)* or [exact same web midi app](https://www.aisongmaker.io/midi-editor)
 - Add notes in web editor or drop midi file - click file-save
 - build this ShadertoyMIDI_in_C
 - `gcc midi2glsl.c -lm -o midi2glsl`
